@@ -2,19 +2,15 @@ from typing import Any
 
 from fastapi import Body, FastAPI
 
+from mock_data import create_mock_book
+from models import Book
+
 app = FastAPI()
 
-BOOKS = [
-    {"title": "Title One", "author": "Author One", "category": "science"},
-    {"title": "Title Two", "author": "Author One", "category": "science"},
-    {"title": "Title Three", "author": "Author Three", "category": "history"},
-    {"title": "Title Four", "author": "Author Four", "category": "math"},
-    {"title": "Title Five", "author": "Author Five", "category": "math"},
-    {"title": "Title Six", "author": "Author Two", "category": "math"},
-]
+BOOKS: list[Book] = [create_mock_book(i) for i in range(100)]
 
 
-def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = None):
+def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
     books_to_return: list[dict[str, Any]] = []
     books_to_return.extend(
         book
@@ -39,12 +35,12 @@ def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = None):
 
 
 @app.get("/books")
-async def books():
+async def get_books():
     return BOOKS
 
 
 @app.get("/books/category/{category}")
-async def books_by_category(
+async def get_books_by_category(
     category: str, title: str | None = None, author: str | None = None
 ):
     return fetch_by(
@@ -57,7 +53,7 @@ async def books_by_category(
 
 
 @app.get("/books/title/{title}")
-async def books_by_title(
+async def get_books_by_title(
     title: str, category: str | None = None, author: str | None = None
 ):
     return fetch_by(
@@ -70,7 +66,7 @@ async def books_by_title(
 
 
 @app.get("/books/author/{author}")
-async def books_by_author(
+async def get_books_by_author(
     author: str, category: str | None = None, title: str | None = None
 ):
     return fetch_by(
