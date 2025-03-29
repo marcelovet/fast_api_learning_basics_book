@@ -4,11 +4,11 @@ from fastapi import FastAPI
 
 # from fastapi import Body
 from mock_data import create_mock_book
-from models import Book
+from models import Book, BookRequest
 
 app = FastAPI()
 
-BOOKS: list[Book] = [create_mock_book(i) for i in range(100)]
+BOOKS: list[Book] = [create_mock_book(i) for i in range(1, 100)]
 
 
 def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
@@ -39,6 +39,13 @@ def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
 @app.get("/books")
 async def get_books():
     return BOOKS
+
+
+@app.get("/books/{id}")
+async def get_book(id: int):
+    if id and id > 0 and id <= len(BOOKS):
+        return BOOKS[id - 1]
+    return []
 
 
 @app.get("/books/category/{category}")
@@ -80,9 +87,11 @@ async def get_books_by_author(
     )
 
 
-# @app.post("/books/create")
-# async def create_book(new_book=Body()):
-#     BOOKS.append(new_book)
+@app.post("/books/create")
+async def create_book(request: BookRequest):
+    new_id = BOOKS[-1].id + 1
+    new_book = Book(id=new_id, **request.model_dump())
+    BOOKS.append(new_book)
 
 
 # @app.put("/books/update")

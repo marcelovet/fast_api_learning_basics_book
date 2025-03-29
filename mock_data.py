@@ -31,11 +31,14 @@ genres = [
 
 
 def create_mock_book(id: int) -> Book:
-    return Book(
-        id=id,
-        title=fake.sentence(nb_words=3),
-        author=fake.name(),
-        description=fake.sentence(nb_words=10),
-        category=choice(genres),
-        rating=fake.random_int(min=1, max=5),
-    )
+    try:
+        return Book(
+            id=id,
+            title=fake.sentence(nb_words=3),
+            author=fake.name(),
+            description=fake.sentence(nb_words=10),
+            category=choice(genres),
+            rating=fake.random_int(min=1, max=5),
+        )
+    except Exception:
+        return create_mock_book(id)
