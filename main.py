@@ -15,3 +15,11 @@ BOOKS = [
 @app.get("/books")
 async def books():
     return BOOKS
+
+
+@app.get("/books/{book_title}")
+async def book(book_title: str):
+    for book in BOOKS:
+        if book.get("title", "").casefold() == book_title.casefold():
+            return book
+    return {"title": None, "author": None, "category": None}
