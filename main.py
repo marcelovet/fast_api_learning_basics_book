@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import Body, FastAPI
 
 app = FastAPI()
 
@@ -44,3 +44,8 @@ async def book(book_category: str, title: str | None = None, author: str | None 
     if not books_to_return:
         return {"title": None, "author": None, "category": None}
     return books_to_return
+
+
+@app.post("/books/create_book")
+async def create_book(new_book=Body()):
+    BOOKS.append(new_book)
