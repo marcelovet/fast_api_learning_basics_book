@@ -6,4 +6,5 @@ class Book(BaseModel):
     title: str
     author: str
     description: str
+    category: str
     rating: int

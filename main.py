@@ -1,7 +1,8 @@
 from typing import Any
 
-from fastapi import Body, FastAPI
+from fastapi import FastAPI
 
+# from fastapi import Body
 from mock_data import create_mock_book
 from models import Book
 
@@ -11,14 +12,15 @@ BOOKS: list[Book] = [create_mock_book(i) for i in range(100)]
 
 
 def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
-    books_to_return: list[dict[str, Any]] = []
+    books_to_return: list[Book] = []
     books_to_return.extend(
         book
         for book in BOOKS
-        if book.get(param["name"], "").casefold() == param["value"].casefold()
+        if book.model_dump().get(param["name"], "").casefold()
+        == param["value"].casefold()
     )
     if not books_to_return:
-        return {"title": None, "author": None, "category": None}
+        return []
     if not query:
         return books_to_return
     for query_param in query:
@@ -26,11 +28,11 @@ def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
             books_to_return = [
                 book
                 for book in books_to_return
-                if book.get(query_param["name"], "").casefold()
+                if book.model_dump().get(query_param["name"], "").casefold()
                 == query_param["value"].casefold()
             ]
     if not books_to_return:
-        return {"title": None, "author": None, "category": None}
+        return []
     return books_to_return
 
 
@@ -78,22 +80,22 @@ async def get_books_by_author(
     )
 
 
-@app.post("/books/create")
-async def create_book(new_book=Body()):
-    BOOKS.append(new_book)
+# @app.post("/books/create")
+# async def create_book(new_book=Body()):
+#     BOOKS.append(new_book)
 
 
-@app.put("/books/update")
-async def update_book(updated_book=Body()):
-    for i in range(len(BOOKS)):
-        if BOOKS[i].get("title", "").casefold() == updated_book.get("title").casefold():
-            BOOKS[i] = updated_book
-            break
+# @app.put("/books/update")
+# async def update_book(updated_book=Body()):
+#     for i in range(len(BOOKS)):
+#         if BOOKS[i].get("title", "").casefold() == updated_book.get("title").casefold():
+#             BOOKS[i] = updated_book
+#             break
 
 
-@app.delete("/books/delete/{book_title}")
-async def delete_book(book_title: str):
-    for i in range(len(BOOKS)):
-        if BOOKS[i].get("title", "").casefold() == book_title.casefold():
-            BOOKS.pop(i)
-            break
+# @app.delete("/books/delete/{book_title}")
+# async def delete_book(book_title: str):
+#     for i in range(len(BOOKS)):
+#         if BOOKS[i].get("title", "").casefold() == book_title.casefold():
+#             BOOKS.pop(i)
+#             break
