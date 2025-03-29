@@ -89,7 +89,7 @@ async def get_books_by_author(
 
 @app.post("/books/create")
 async def create_book(request: BookRequest):
-    new_id = BOOKS[-1].id + 1
+    new_id = BOOKS[-1].id + 1 if BOOKS else 1
     new_book = Book(id=new_id, **request.model_dump())
     BOOKS.append(new_book)
 
