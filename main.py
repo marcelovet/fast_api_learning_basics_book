@@ -2,7 +2,6 @@ from typing import Any
 
 from fastapi import FastAPI
 
-# from fastapi import Body
 from mock_data import create_mock_book
 from models import Book, BookRequest
 
@@ -11,28 +10,29 @@ app = FastAPI()
 BOOKS: list[Book] = [create_mock_book(i) for i in range(1, 100)]
 
 
-def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
-    books_to_return: list[Book] = []
-    books_to_return.extend(
-        book
-        for book in BOOKS
-        if book.model_dump().get(param["name"], "").casefold()
-        == param["value"].casefold()
-    )
-    if not books_to_return:
+def filter(to_filter: list[Book], name: str, value: Any):
+    if not to_filter:
         return []
-    if not query:
+    if isinstance(value, str):
+        return [
+            book
+            for book in to_filter
+            if book.model_dump().get(name, "").casefold() == value.casefold()
+        ]
+    if isinstance(value, int):
+        return [book for book in to_filter if book.model_dump().get(name, 0) == value]
+    return []
+
+
+def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
+    books_to_return: list[Book] = filter(BOOKS, param["name"], param["value"])
+    if not books_to_return or not query:
         return books_to_return
     for query_param in query:
-        if books_to_return and query_param:
-            books_to_return = [
-                book
-                for book in books_to_return
-                if book.model_dump().get(query_param["name"], "").casefold()
-                == query_param["value"].casefold()
-            ]
-    if not books_to_return:
-        return []
+        if query_param:
+            books_to_return = filter(
+                books_to_return, query_param["name"], query_param["value"]
+            )
     return books_to_return
 
 
@@ -43,9 +43,7 @@ async def get_books():
 
 @app.get("/books/{id}")
 async def get_book(id: int):
-    if id and id > 0 and id <= len(BOOKS):
-        return BOOKS[id - 1]
-    return []
+    return fetch_by({"name": "id", "value": id})
 
 
 @app.get("/books/category/{category}")
@@ -81,6 +79,23 @@ async def get_books_by_author(
     return fetch_by(
         {"name": "author", "value": author},
         [
+            {"name": "category", "value": category} if category else None,
+            {"name": "title", "value": title} if title else None,
+        ],
+    )
+
+
+@app.get("/books/rating/{rating}")
+async def get_books_by_rating(
+    rating: int,
+    author: str | None = None,
+    category: str | None = None,
+    title: str | None = None,
+):
+    return fetch_by(
+        {"name": "rating", "value": rating},
+        [
+            {"name": "author", "value": author} if author else None,
             {"name": "category", "value": category} if category else None,
             {"name": "title", "value": title} if title else None,
         ],
