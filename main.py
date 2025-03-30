@@ -10,7 +10,7 @@ app = FastAPI()
 BOOKS: list[Book] = [create_mock_book(i) for i in range(1, 100)]
 
 
-def filter(to_filter: list[Book], name: str, value: Any):
+def fetch(to_filter: list[Book], name: str, value: Any):
     if not to_filter:
         return []
     if isinstance(value, str):
@@ -25,12 +25,12 @@ def filter(to_filter: list[Book], name: str, value: Any):
 
 
 def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
-    books_to_return: list[Book] = filter(BOOKS, param["name"], param["value"])
+    books_to_return: list[Book] = fetch(BOOKS, param["name"], param["value"])
     if not books_to_return or not query:
         return books_to_return
     for query_param in query:
         if query_param:
-            books_to_return = filter(
+            books_to_return = fetch(
                 books_to_return, query_param["name"], query_param["value"]
             )
     return books_to_return
@@ -104,22 +104,27 @@ async def get_books_by_rating(
 
 @app.post("/books/create")
 async def create_book(request: BookRequest):
-    new_id = BOOKS[-1].id + 1 if BOOKS else 1
-    new_book = Book(id=new_id, **request.model_dump())
+    request.id = BOOKS[-1].id + 1 if BOOKS else 1
+    new_book = Book(**request.model_dump())
     BOOKS.append(new_book)
 
 
-# @app.put("/books/update")
-# async def update_book(updated_book=Body()):
-#     for i in range(len(BOOKS)):
-#         if BOOKS[i].get("title", "").casefold() == updated_book.get("title").casefold():
-#             BOOKS[i] = updated_book
-#             break
+@app.put("/books/update")
+async def update_book(request: BookRequest):
+    book = fetch_by({"name": "id", "value": request.id})
+    if not book:
+        return {"message": "Book not found"}
+    book[0].title = request.title
+    book[0].author = request.author
+    book[0].description = request.description
+    book[0].category = request.category
+    book[0].rating = request.rating
+    return book[0]
 
 
-# @app.delete("/books/delete/{book_title}")
-# async def delete_book(book_title: str):
-#     for i in range(len(BOOKS)):
-#         if BOOKS[i].get("title", "").casefold() == book_title.casefold():
-#             BOOKS.pop(i)
-#             break
+@app.delete("/books/delete/{id}")
+async def delete_book(id: int):
+    book = fetch_by({"name": "id", "value": id})
+    if not book:
+        return {"message": "Book not found"}
+    BOOKS.remove(book[0])

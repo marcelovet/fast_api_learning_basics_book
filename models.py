@@ -11,6 +11,7 @@ class Book(BaseModel):
 
 
 class BookRequest(BaseModel):
+    id: int | None = Field(gt=0, default=None)
     title: str = Field(
         min_length=3,
         description=(
