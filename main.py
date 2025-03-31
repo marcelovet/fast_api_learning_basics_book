@@ -1,7 +1,8 @@
 from datetime import date
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import FastAPI, Path
+from fastapi import FastAPI, HTTPException, Path, Query
+from starlette import status
 
 from mock_data import create_mock_book
 from models import Book, BookRequest
@@ -13,22 +14,27 @@ BOOKS: list[Book] = [create_mock_book(i) for i in range(1, 100)]
 
 def fetch(to_filter: list[Book], name: str, value: Any):
     if not to_filter:
-        return []
+        raise HTTPException(status_code=404, detail="Books not found")
+    filtered = to_filter
     if isinstance(value, str):
-        return [
+        filtered = [
             book
             for book in to_filter
             if book.model_dump().get(name, "").casefold() == value.casefold()
         ]
     if isinstance(value, int):
-        return [book for book in to_filter if book.model_dump().get(name, 0) == value]
+        filtered = [
+            book for book in to_filter if book.model_dump().get(name, 0) == value
+        ]
     if isinstance(value, date):
-        return [
+        filtered = [
             book
             for book in to_filter
             if name in book.model_dump() and book.model_dump()[name].year == value.year
         ]
-    return []
+    if not filtered:
+        raise HTTPException(status_code=404, detail="Books not found")
+    return filtered
 
 
 def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
@@ -43,17 +49,17 @@ def fetch_by(param: dict[str, Any], query: list[dict[str, Any] | None] = []):
     return books_to_return
 
 
-@app.get("/books")
+@app.get("/books", status_code=status.HTTP_200_OK)
 async def get_books():
     return BOOKS
 
 
-@app.get("/books/{id}")
+@app.get("/books/{id}", status_code=status.HTTP_200_OK)
 async def get_book(id: int = Path(gt=0)):
     return fetch_by({"name": "id", "value": id})
 
 
-@app.get("/books/category/{category}")
+@app.get("/books/category/{category}", status_code=status.HTTP_200_OK)
 async def get_books_by_category(
     category: str, title: str | None = None, author: str | None = None
 ):
@@ -66,7 +72,7 @@ async def get_books_by_category(
     )
 
 
-@app.get("/books/title/{title}")
+@app.get("/books/title/{title}", status_code=status.HTTP_200_OK)
 async def get_books_by_title(
     title: str, category: str | None = None, author: str | None = None
 ):
@@ -79,7 +85,7 @@ async def get_books_by_title(
     )
 
 
-@app.get("/books/author/{author}")
+@app.get("/books/author/{author}", status_code=status.HTTP_200_OK)
 async def get_books_by_author(
     author: str, category: str | None = None, title: str | None = None
 ):
@@ -92,9 +98,9 @@ async def get_books_by_author(
     )
 
 
-@app.get("/books/rating/{rating}")
+@app.get("/books/rating/{rating}", status_code=status.HTTP_200_OK)
 async def get_books_by_rating(
-    rating: int,
+    rating: int = Path(gt=0, lt=6),
     author: str | None = None,
     category: str | None = None,
     title: str | None = None,
@@ -109,10 +115,13 @@ async def get_books_by_rating(
     )
 
 
-@app.get("/books/publication_year/{year}")
+@app.get("/books/publication_year/{year}", status_code=status.HTTP_200_OK)
 async def get_books_by_publication_year(
     year: int,
-    rating: int | None = None,
+    rating: Annotated[
+        int | None,
+        Query(gt=0, lt=6, description="The rating of the book searched for."),
+    ] = None,
     author: str | None = None,
     category: str | None = None,
     title: str | None = None,
@@ -128,14 +137,15 @@ async def get_books_by_publication_year(
     )
 
 
-@app.post("/books/create")
+@app.post("/books/create", status_code=status.HTTP_201_CREATED)
 async def create_book(request: BookRequest):
     request.id = BOOKS[-1].id + 1 if BOOKS else 1
     new_book = Book(**request.model_dump())
     BOOKS.append(new_book)
+    return new_book
 
 
-@app.put("/books/update")
+@app.put("/books/update", status_code=status.HTTP_204_NO_CONTENT)
 async def update_book(request: BookRequest):
     book = fetch_by({"name": "id", "value": request.id})
     if not book:
@@ -145,12 +155,9 @@ async def update_book(request: BookRequest):
     book[0].description = request.description
     book[0].category = request.category
     book[0].rating = request.rating
-    return book[0]
 
 
-@app.delete("/books/delete/{id}")
+@app.delete("/books/delete/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_book(id: int = Path(gt=0)):
     book = fetch_by({"name": "id", "value": id})
-    if not book:
-        return {"message": "Book not found"}
     BOOKS.remove(book[0])
