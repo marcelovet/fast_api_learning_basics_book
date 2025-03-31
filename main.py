@@ -1,6 +1,7 @@
+from datetime import date
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Path
 
 from mock_data import create_mock_book
 from models import Book, BookRequest
@@ -21,6 +22,12 @@ def fetch(to_filter: list[Book], name: str, value: Any):
         ]
     if isinstance(value, int):
         return [book for book in to_filter if book.model_dump().get(name, 0) == value]
+    if isinstance(value, date):
+        return [
+            book
+            for book in to_filter
+            if name in book.model_dump() and book.model_dump()[name].year == value.year
+        ]
     return []
 
 
@@ -42,7 +49,7 @@ async def get_books():
 
 
 @app.get("/books/{id}")
-async def get_book(id: int):
+async def get_book(id: int = Path(gt=0)):
     return fetch_by({"name": "id", "value": id})
 
 
@@ -102,6 +109,25 @@ async def get_books_by_rating(
     )
 
 
+@app.get("/books/publication_year/{year}")
+async def get_books_by_publication_year(
+    year: int,
+    rating: int | None = None,
+    author: str | None = None,
+    category: str | None = None,
+    title: str | None = None,
+):
+    return fetch_by(
+        {"name": "published_date", "value": date(year, 1, 1)},
+        [
+            {"name": "rating", "value": rating} if rating else None,
+            {"name": "author", "value": author} if author else None,
+            {"name": "category", "value": category} if category else None,
+            {"name": "title", "value": title} if title else None,
+        ],
+    )
+
+
 @app.post("/books/create")
 async def create_book(request: BookRequest):
     request.id = BOOKS[-1].id + 1 if BOOKS else 1
@@ -123,7 +149,7 @@ async def update_book(request: BookRequest):
 
 
 @app.delete("/books/delete/{id}")
-async def delete_book(id: int):
+async def delete_book(id: int = Path(gt=0)):
     book = fetch_by({"name": "id", "value": id})
     if not book:
         return {"message": "Book not found"}

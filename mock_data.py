@@ -39,6 +39,7 @@ def create_mock_book(id: int) -> Book:
             description=fake.sentence(nb_words=10),
             category=choice(genres),
             rating=fake.random_int(min=1, max=5),
+            published_date=fake.date_this_century(),
         )
     except Exception:
         return create_mock_book(id)

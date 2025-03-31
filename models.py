@@ -1,3 +1,5 @@
+from datetime import date, datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -8,6 +10,7 @@ class Book(BaseModel):
     description: str = Field(min_length=10)
     category: str = Field(min_length=4)
     rating: int = Field(gt=-1, lt=6)
+    published_date: date = Field(default=datetime.now().date())
 
 
 class BookRequest(BaseModel):
@@ -34,6 +37,10 @@ class BookRequest(BaseModel):
         gt=-1,
         lt=6,
         description="The rating of the book.",
+    )
+    published_date: date = Field(
+        default=datetime.now().date(),
+        description=("The date the book was published."),
     )
 
     model_config = {
